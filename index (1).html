@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<meta name="description" content="Кликай по красной кнопке, собирай клики и покупай улучшения.">
+<title>Красная кнопка — кликер</title>
+<style>
+:root{color-scheme:dark;--bg:#050505;--red:#f21d35;--white:#f7f7f8;--muted:#77777f;--panel:rgba(17,17,21,.98);--line:rgba(255,255,255,.1)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{min-height:100svh;overflow:hidden;background:radial-gradient(ellipse at 50% 54%,rgba(242,29,53,.075),transparent 38%),var(--bg);color:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:grid;grid-template-rows:auto 1fr auto;user-select:none;-webkit-tap-highlight-color:transparent}button{font:inherit}
+header{width:100%;padding:clamp(22px,4vw,38px) 24px 12px;display:flex;justify-content:center;align-items:center;position:relative}.counter{text-align:center}.label{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;margin-bottom:7px}#count{display:block;font-size:clamp(38px,7vw,62px);line-height:1;font-weight:850;letter-spacing:-.055em;font-variant-numeric:tabular-nums;text-shadow:0 0 28px rgba(242,29,53,.13);transition:transform .12s ease}#count.bump{transform:scale(1.1)}
+.tools{position:absolute;right:clamp(18px,4vw,38px);top:28px;display:flex;gap:8px}.tool{display:grid;place-items:center;width:39px;height:39px;border:1px solid #29292d;border-radius:50%;background:#101012;color:#a6a6ad;cursor:pointer;transition:border-color .15s,color .15s,transform .15s}.tool:hover{border-color:#555;color:#fff}.tool:active{transform:scale(.93)}.tool svg{width:17px;height:17px}
+main{display:grid;place-items:center;padding:12px 20px 22px}.stage{display:grid;justify-items:center;gap:28px;transform:translateY(-8px)}.button-wrap{position:relative;display:grid;place-items:center}.halo{position:absolute;width:min(73vw,330px);aspect-ratio:1;border-radius:50%;background:rgba(242,29,53,.09);filter:blur(35px);pointer-events:none;transition:opacity .15s,transform .15s}
+#clickButton{width:clamp(190px,42vw,260px);aspect-ratio:1;border:0;border-radius:50%;position:relative;z-index:1;cursor:pointer;color:#fff;background:linear-gradient(145deg,#ff354b 0%,#f21d35 44%,#cf1028 100%);box-shadow:0 0 0 10px rgba(242,29,53,.045),0 0 0 1px rgba(255,255,255,.14) inset,0 12px 0 #8b091b,0 24px 55px rgba(210,8,35,.28),0 0 70px rgba(242,29,53,.13);display:grid;place-items:center;transition:transform .075s ease,box-shadow .075s ease,filter .15s ease;outline:none;touch-action:manipulation}#clickButton:hover{filter:brightness(1.08)}#clickButton:focus-visible{outline:3px solid #fff;outline-offset:17px}#clickButton:active,#clickButton.pressed{transform:translateY(8px) scale(.985);box-shadow:0 0 0 7px rgba(242,29,53,.04),0 0 0 1px rgba(255,255,255,.12) inset,0 4px 0 #8b091b,0 10px 28px rgba(210,8,35,.22)}#clickButton:disabled{cursor:default}.button-inner{display:grid;justify-items:center;gap:8px}.button-inner strong{font-size:clamp(23px,5vw,30px);letter-spacing:.12em;font-weight:900}#buttonSubtitle{font-size:10px;font-weight:800;letter-spacing:.26em;opacity:.73;transition:opacity 2.4s ease,transform 2.4s ease}#buttonSubtitle.faded{opacity:0;transform:translateY(-6px)}
+.hint,.tagline{color:#66666d;font-size:12px;letter-spacing:.04em;text-align:center;opacity:1;transform:translateY(0);transition:opacity 2.4s ease,transform 2.4s ease}.hint.faded,.tagline.faded{opacity:0;transform:translateY(-4px)}footer{text-align:center;padding:15px 20px 23px;color:#45454b;font-size:10px;letter-spacing:.2em;font-weight:700}.flash{position:fixed;inset:0;z-index:8;pointer-events:none;background:rgba(242,29,53,.035);opacity:0}.flash.go{animation:flash .18s ease-out}@keyframes flash{0%{opacity:1}100%{opacity:0}}
+/* Threshold overlay and cart entrance. The cart comes from completely outside the left edge. */
+.gate-overlay{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.76);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .8s ease,visibility .8s ease}.gate-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
+.shop-button{position:fixed;z-index:22;left:24px;top:50%;width:82px;height:82px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:28px;color:#fff;background:linear-gradient(145deg,#242429,#101013 72%);box-shadow:0 10px 35px rgba(0,0,0,.45),0 0 0 1px rgba(242,29,53,.08) inset;font-size:37px;cursor:pointer;opacity:0;visibility:hidden;pointer-events:none;transform:translate(calc(-100% - 48px),-50%) scale(.78) rotate(-8deg);transition:opacity .18s ease,transform 1.2s cubic-bezier(.16,1,.3,1),visibility .18s ease,border-color .2s ease,box-shadow .2s ease;touch-action:manipulation}
+.shop-button.visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(0,-50%) scale(1) rotate(0)}.shop-button:hover,.shop-button:focus-visible{border-color:rgba(255,65,86,.8);box-shadow:0 0 0 5px rgba(242,29,53,.1),0 12px 42px rgba(242,29,53,.23);transform:translate(0,-50%) scale(1.05) rotate(2deg);outline:none}.shop-button:active{transform:translate(0,-50%) scale(.94)}.cart-emoji{position:relative;z-index:2;display:block;filter:drop-shadow(0 4px 8px rgba(242,29,53,.22));transition:transform .25s ease}.shop-button:hover .cart-emoji{animation:cartWiggle .55s ease-in-out infinite alternate}@keyframes cartWiggle{from{transform:rotate(-7deg) translateY(-1px)}to{transform:rotate(7deg) translateY(2px)}}
+/* Items fall along the centre line of the cart; they are spawned only by a click. */
+.cart-drop{position:absolute;z-index:1;top:-22px;left:50%;font-size:21px;opacity:0;pointer-events:none;animation:cartDrop .86s cubic-bezier(.35,.04,.68,.3) forwards;animation-delay:var(--drop-delay,0ms)}@keyframes cartDrop{0%{transform:translate(-50%,-12px) rotate(-25deg) scale(.7);opacity:0}18%{opacity:1}76%{transform:translate(-50%,34px) rotate(12deg) scale(.85);opacity:1}100%{transform:translate(-50%,68px) rotate(28deg) scale(.3);opacity:0}}
+.shop-backdrop{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.67);backdrop-filter:blur(7px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .24s ease,visibility .24s ease}.shop-backdrop.active{opacity:1;visibility:visible;pointer-events:auto}.shop-dialog{position:fixed;z-index:40;inset:50% auto auto 50%;transform:translate(-50%,-46%) scale(.96);width:min(560px,calc(100vw - 28px));max-height:min(84svh,760px);overflow:auto;padding:24px;border:1px solid rgba(255,255,255,.12);border-radius:25px;background:var(--panel);box-shadow:0 24px 100px rgba(0,0,0,.65),0 0 45px rgba(242,29,53,.08);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .24s ease,transform .24s ease,visibility .24s ease;overscroll-behavior:contain}.shop-dialog.active{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.shop-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px}.shop-kicker{margin:0 0 5px;font-size:10px;font-weight:900;color:#ff6375;letter-spacing:.24em;text-transform:uppercase}.shop-title{margin:0;font-size:clamp(22px,5vw,29px);letter-spacing:-.04em}.close-shop{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;margin:-5px -5px 0 0;border:1px solid #34343a;border-radius:50%;background:#1a1a1f;color:#c5c5cb;cursor:pointer;transition:background .15s,color .15s,transform .15s}.close-shop:hover{background:#302027;color:#fff;transform:rotate(90deg)}.close-shop svg{width:17px;height:17px}.shop-balance{color:#a9a9b2;font-size:13px;margin:0 0 19px}.shop-balance strong{color:#fff;font-variant-numeric:tabular-nums}.upgrade-list{display:grid;gap:12px}.upgrade-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:start;padding:15px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018))}.upgrade-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(242,29,53,.12);font-size:24px}.upgrade-content{min-width:0}.upgrade-heading{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 5px}.upgrade-heading h3{margin:0;font-size:15px;letter-spacing:-.02em}.level-pill{padding:3px 7px;border:1px solid rgba(255,255,255,.11);border-radius:20px;color:#c2c2ca;font-size:10px;white-space:nowrap}.upgrade-desc{margin:0 0 12px;color:#93939d;font-size:12px;line-height:1.45}.upgrade-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}.price{color:#ffb1ba;font-size:12px;font-weight:800;white-space:nowrap}.buy-button{flex:0 0 auto;min-height:35px;padding:8px 13px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:#f21d35;color:#fff;font-size:11px;font-weight:900;cursor:pointer;transition:transform .14s ease,background .14s ease,opacity .14s ease}.buy-button:not(:disabled):hover{background:#ff344b;transform:translateY(-1px)}.buy-button:active:not(:disabled){transform:translateY(1px)}.buy-button:disabled{cursor:not-allowed;opacity:.38;background:#4a252b}.shop-note{margin:15px 2px 0;color:#65656e;font-size:10px;line-height:1.5}.toast{position:fixed;z-index:60;left:50%;bottom:24px;transform:translate(-50%,12px);padding:10px 15px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(22,22,26,.96);color:#ededf0;font-size:12px;box-shadow:0 8px 28px rgba(0,0,0,.3);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,transform .2s,visibility .2s;white-space:nowrap}.toast.active{opacity:1;visibility:visible;transform:translate(-50%,0)}
+@media(max-width:520px){header{padding-top:24px}.tools{top:19px;right:14px;gap:6px}.tool{width:34px;height:34px}.stage{gap:25px}.shop-button{width:66px;height:66px;font-size:30px;left:max(18px,env(safe-area-inset-left));top:auto;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(calc(-100% - 42px)) scale(.76) rotate(-8deg);border-radius:22px}.shop-button.visible{transform:translateX(0) scale(1) rotate(0)}.shop-button:hover,.shop-button:focus-visible{transform:translateX(0) scale(1.05) rotate(2deg)}.shop-button:active{transform:translateX(0) scale(.94)}.shop-dialog{padding:19px;border-radius:21px}.upgrade-card{padding:12px;grid-template-columns:40px minmax(0,1fr);gap:10px}.upgrade-icon{width:40px;height:40px;font-size:21px}.upgrade-bottom{align-items:flex-start}.buy-button{padding:8px 10px}footer{padding-bottom:max(14px,env(safe-area-inset-bottom))}}
+@media(max-height:570px){header{padding-top:12px}#count{font-size:37px}.stage{gap:16px;transform:none}#clickButton{width:min(42vh,190px)}.halo{width:min(54vh,250px)}footer{padding-bottom:10px}.shop-dialog{max-height:90svh;padding:16px}.upgrade-list{gap:8px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* Rebirth button: it shares the cart's smooth entrance from outside the screen. */
+.rebirth-button .rebirth-emoji{position:relative;z-index:2;display:block;filter:drop-shadow(0 0 10px rgba(125,90,255,.35));font-size:36px;transform-origin:50% 50%}
+.rebirth-button:hover .rebirth-emoji{filter:drop-shadow(0 0 14px rgba(160,120,255,.65));transform:scale(1.06)}
+.rebirth-button.spinning .rebirth-emoji{animation:rebirthSpin 1.08s cubic-bezier(.2,.72,.2,1) both}
+@keyframes rebirthSpin{0%{transform:rotate(0) scale(1)}35%{transform:rotate(420deg) scale(1.22)}72%{transform:rotate(690deg) scale(.88)}100%{transform:rotate(1080deg) scale(1)}}
+.rebirth-particle{position:absolute;z-index:3;left:50%;top:50%;font-size:18px;pointer-events:none;animation:rebirthParticle 1s ease-out forwards}
+@keyframes rebirthParticle{0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}16%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--particle-x)),calc(-50% + var(--particle-y))) scale(.7) rotate(80deg)}}
+.rebirth-backdrop{background:rgba(0,0,0,.73)}
+.rebirth-dialog{border-color:rgba(160,120,255,.22);box-shadow:0 24px 100px rgba(0,0,0,.68),0 0 48px rgba(120,85,255,.12)}
+.rebirth-level-text{color:#c7b8ff;font-size:12px;font-weight:750;letter-spacing:.04em;margin:0 0 12px}
+.rebirth-price{font-size:13px;font-weight:850;color:#fff;margin:-5px 0 17px}
+.rebirth-progress-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#9696a2;font-size:11px;margin-bottom:8px}
+.rebirth-progress-meta strong{color:#d9ccff;font-size:12px;font-variant-numeric:tabular-nums}
+.rebirth-progress-track{height:11px;border-radius:99px;overflow:hidden;background:#292631;border:1px solid rgba(255,255,255,.07);box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
+.rebirth-progress-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#7955eb,#c3a5ff);box-shadow:0 0 18px rgba(154,117,255,.38);transition:width .38s cubic-bezier(.2,.8,.2,1)}
+.rebirth-reward{padding:12px 13px;margin:17px 0 12px;border-radius:13px;border:1px solid rgba(159,128,255,.18);background:rgba(129,93,255,.075);color:#c7c0d9;font-size:12px;line-height:1.5}
+.rebirth-confirm{width:100%;min-height:43px;font-size:12px;letter-spacing:.01em;background:linear-gradient(100deg,#7955eb,#9b66ff)}
+.rebirth-confirm:not(:disabled):hover{background:linear-gradient(100deg,#8969f1,#ac7aff)}
+.rebirth-confirm:disabled{background:#37313f;color:#8b8794;opacity:.85}
+@media(max-width:520px){.rebirth-button{width:66px;height:66px;font-size:30px;left:max(18px,env(safe-area-inset-left));top:auto;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(calc(-100% - 42px)) scale(.76) rotate(-8deg)}.rebirth-button.visible{transform:translateX(0) scale(1) rotate(0)}.rebirth-button:hover,.rebirth-button:focus-visible{transform:translateX(0) scale(1.05) rotate(2deg)}.rebirth-button:active{transform:translateX(0) scale(.94)}.rebirth-button .rebirth-emoji{font-size:31px}.rebirth-dialog{padding:19px;border-radius:21px}.rebirth-reward{font-size:11px;padding:11px}}
+@media(prefers-reduced-motion:reduce){.rebirth-button.spinning .rebirth-emoji{animation:none}.rebirth-progress-fill{transition:none}}
+
+</style>
+</head>
+<body>
+<header><div class="counter" aria-live="polite" aria-atomic="true"><div class="label">Кликов</div><output id="count">0</output></div><div class="tools"><button class="tool" id="soundToggle" type="button" aria-label="Выключить звук" title="Звук включён"><svg id="soundIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button><button class="tool" id="resetButton" type="button" aria-label="Сбросить счёт" title="Сбросить счёт"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button></div></header>
+<main><div class="stage"><div class="button-wrap"><div class="halo" id="halo"></div><button id="clickButton" type="button" aria-label="Красная кнопка — увеличить счёт"><span class="button-inner"><strong>КЛИК</strong><span id="buttonSubtitle">НАЖМИ МЕНЯ</span></span></button></div><div class="hint" id="hint">Один клик — одно очко.</div></div></main>
+<footer><span id="tagline" class="tagline">ПРОСТО КЛИКАЙ.</span></footer><div class="flash" id="flash"></div>
+<div class="gate-overlay" id="gateOverlay" aria-hidden="true"></div><button class="shop-button" id="shopButton" type="button" aria-label="Открыть магазин" title="Магазин" aria-hidden="true" tabindex="-1"><span class="cart-emoji" aria-hidden="true">🛒</span></button>
+<button class="shop-button rebirth-button" id="rebirthButton" type="button" aria-label="Открыть перерождение" title="Перерождение" aria-hidden="true" tabindex="-1"><span class="rebirth-emoji" aria-hidden="true">🔄</span></button>
+<div class="shop-backdrop" id="shopBackdrop"></div><section class="shop-dialog" id="shopDialog" role="dialog" aria-modal="true" aria-labelledby="shopTitle" aria-hidden="true"><div class="shop-top"><div><p class="shop-kicker">Твой прогресс</p><h2 class="shop-title" id="shopTitle">Магазин улучшений</h2></div><button class="close-shop" id="closeShop" type="button" aria-label="Закрыть магазин" title="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p class="shop-balance">Твой баланс: <strong id="shopBalance">0</strong> кликов</p><div class="upgrade-list">
+<article class="upgrade-card"><div class="upgrade-icon" aria-hidden="true">✨</div><div class="upgrade-content"><div class="upgrade-heading"><h3>Золотой клик</h3><span class="level-pill" id="goldLevel">Уровень 0/5</span></div><p class="upgrade-desc" id="goldDescription">Каждый уровень даёт ещё +1 клик за нажатие. Всего 5 уровней.</p><div class="upgrade-bottom"><span class="price" id="goldPrice">Цена: 50 кликов</span><button class="buy-button" id="buyGold" type="button">Купить</button></div></div></article>
+<article class="upgrade-card"><div class="upgrade-icon" aria-hidden="true">⚡</div><div class="upgrade-content"><div class="upgrade-heading"><h3>Автоклик</h3><span class="level-pill" id="autoStatus">Не куплен</span></div><p class="upgrade-desc" id="autoDescription">Автоматически добавляет +1 клик каждую секунду.</p><div class="upgrade-bottom"><span class="price" id="autoPrice">Цена: 250 кликов</span><button class="buy-button" id="buyAuto" type="button">Купить</button></div></div></article></div><p class="shop-note">Клики — твоя единая валюта. Покупки тратят клики с общего счёта.</p></section>
+<div class="shop-backdrop rebirth-backdrop" id="rebirthBackdrop" aria-hidden="true"></div>
+<section class="shop-dialog rebirth-dialog" id="rebirthDialog" role="dialog" aria-modal="true" aria-labelledby="rebirthTitle" aria-hidden="true">
+  <div class="shop-top"><div><p class="shop-kicker">Новый цикл · вечный бонус</p><h2 class="shop-title" id="rebirthTitle">Перерождение 0/3</h2></div><button class="close-shop" id="closeRebirth" type="button" aria-label="Закрыть окно перерождения" title="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <p class="rebirth-level-text" id="rebirthLevelText">Следующий уровень: перерождение 1/3</p>
+  <p class="shop-balance">Твой баланс: <strong id="rebirthBalance">0</strong> кликов</p>
+  <div class="rebirth-price" id="rebirthPrice">Цена: 50 кликов</div>
+  <div class="rebirth-progress-meta"><span>Прогресс накопления</span><strong id="rebirthPercent">0%</strong></div>
+  <div class="rebirth-progress-track" id="rebirthProgressTrack" role="progressbar" aria-label="Прогресс до перерождения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="rebirth-progress-fill" id="rebirthProgress"></div></div>
+  <p class="rebirth-reward" id="rebirthReward">Награда: постоянный множитель дохода ×2. Клики и улучшения сбросятся до нуля.</p>
+  <button class="buy-button rebirth-confirm" id="confirmRebirth" type="button" disabled>Нужно больше кликов</button>
+  <p class="shop-note">Перерождение сбрасывает все клики и улучшения. Сохраняется только номер перерождения и множитель дохода.</p>
+</section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const countOutput = $('count');
+  const clickButton = $('clickButton');
+  const buttonSubtitle = $('buttonSubtitle');
+  const soundToggle = $('soundToggle');
+  const soundIcon = $('soundIcon');
+  const resetButton = $('resetButton');
+  const halo = $('halo');
+  const flash = $('flash');
+  const hint = $('hint');
+  const tagline = $('tagline');
+  const gateOverlay = $('gateOverlay');
+  const shopButton = $('shopButton');
+  const shopBackdrop = $('shopBackdrop');
+  const shopDialog = $('shopDialog');
+  const closeShopButton = $('closeShop');
+  const shopBalance = $('shopBalance');
+  const goldLevelLabel = $('goldLevel');
+  const goldDescription = $('goldDescription');
+  const goldPrice = $('goldPrice');
+  const buyGoldButton = $('buyGold');
+  const autoStatus = $('autoStatus');
+  const autoDescription = $('autoDescription');
+  const autoPrice = $('autoPrice');
+  const buyAutoButton = $('buyAuto');
+  const toast = $('toast');
+  const rebirthButton = $('rebirthButton');
+  const rebirthBackdrop = $('rebirthBackdrop');
+  const rebirthDialog = $('rebirthDialog');
+  const closeRebirthButton = $('closeRebirth');
+  const rebirthTitle = $('rebirthTitle');
+  const rebirthLevelText = $('rebirthLevelText');
+  const rebirthBalance = $('rebirthBalance');
+  const rebirthPriceText = $('rebirthPrice');
+  const rebirthProgress = $('rebirthProgress');
+  const rebirthProgressTrack = rebirthProgress.parentElement;
+  const rebirthPercent = $('rebirthPercent');
+  const rebirthReward = $('rebirthReward');
+  const confirmRebirthButton = $('confirmRebirth');
+
+  const STORAGE_KEY = 'red-click-game-v2';
+  const LEGACY_KEY = 'red-click-count-v1';
+  const GOLD_PRICES = [50, 100, 200, 300, 500];
+  const AUTO_PRICE = 250;
+  const REBIRTH_PRICES = [1000, 5000, 15000];
+  const REBIRTH_MULTIPLIERS = [2, 3, 5];
+  const MAX_REBIRTHS = 3;
+  const MAX = Number.MAX_SAFE_INTEGER;
+
+  // Confirmed browser reloads start a fresh game. The browser controls the warning text.
+  function isReloadNavigation() {
+    try {
+      const entries = performance.getEntriesByType('navigation');
+      return !!entries.length && entries[0].type === 'reload';
+    } catch (_) { return false; }
+  }
+  if (isReloadNavigation()) {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_KEY);
+    } catch (_) { /* Storage can be disabled. */ }
+  }
+
+  let totalClicks = 0;
+  let balance = 0;
+  let manualClicks = 0;
+  let goldLevel = 0;
+  let autoClick = false;
+  let shopUnlocked = false;
+  let gatePending = false;
+  let soundOn = true;
+  let shopOpen = false;
+  let rebirthLevel = 0;
+  let rebirthUnlocked = false;
+  let rebirthPending = false;
+  let rebirthOpen = false;
+  let audioContext = null;
+  let bumpTimer = 0;
+  let toastTimer = 0;
+  let shopOpenTimer = 0;
+  let rebirthOpenTimer = 0;
+
+  function safeInt(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number >= 0 ? number : fallback;
+  }
+  function incomeMultiplier() {
+    return [1, 2, 3, 5][Math.min(rebirthLevel, MAX_REBIRTHS)];
+  }
+  function allShopUpgradesBought() {
+    return goldLevel >= 5 && autoClick;
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        totalClicks = safeInt(data.totalClicks, safeInt(data.count));
+        balance = safeInt(data.balance, safeInt(data.count));
+        manualClicks = safeInt(data.manualClicks, totalClicks);
+        goldLevel = Math.min(5, safeInt(data.goldLevel));
+        autoClick = data.autoClick === true;
+        shopUnlocked = data.shopUnlocked === true || totalClicks >= 50;
+        gatePending = data.gatePending === true;
+        rebirthLevel = Math.min(MAX_REBIRTHS, safeInt(data.rebirthLevel));
+        rebirthUnlocked = data.rebirthUnlocked === true;
+        rebirthPending = data.rebirthPending === true;
+        if (shopUnlocked && data.gatePending === undefined && totalClicks >= 50) gatePending = true;
+        if (allShopUpgradesBought() && rebirthLevel < MAX_REBIRTHS) {
+          rebirthUnlocked = true;
+          gatePending = false;
+        }
+      } else {
+        const legacy = safeInt(localStorage.getItem(LEGACY_KEY));
+        totalClicks = legacy;
+        balance = legacy;
+        manualClicks = legacy;
+        shopUnlocked = legacy >= 50;
+        gatePending = legacy >= 50;
+      }
+    } catch (_) {
+      totalClicks = 0; balance = 0; manualClicks = 0; goldLevel = 0; autoClick = false;
+      shopUnlocked = false; gatePending = false; rebirthLevel = 0;
+      rebirthUnlocked = false; rebirthPending = false;
+    }
+  }
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        count: totalClicks, totalClicks, balance, manualClicks, goldLevel, autoClick,
+        shopUnlocked, gatePending, rebirthLevel, rebirthUnlocked, rebirthPending
+      }));
+    } catch (_) { /* Storage can be disabled. */ }
+  }
+  function formatNumber(number) { return Math.max(0, number).toLocaleString('ru-RU'); }
+  function russianCountWord(number, one, few, many) {
+    const lastTwo = number % 100;
+    if (lastTwo >= 11 && lastTwo <= 14) return many;
+    const last = number % 10;
+    if (last === 1) return one;
+    if (last >= 2 && last <= 4) return few;
+    return many;
+  }
+  function clickWord(number) { return russianCountWord(number, 'клик', 'клика', 'кликов'); }
+
+  function renderShop() {
+    shopBalance.textContent = formatNumber(balance);
+    goldLevelLabel.textContent = `Уровень ${goldLevel}/5`;
+    if (goldLevel >= 5) {
+      goldDescription.textContent = `Максимальный уровень! Каждое нажатие приносит ${goldLevel + 1} кликов.`;
+      goldPrice.textContent = 'Максимум достигнут';
+      buyGoldButton.textContent = 'Куплено';
+      buyGoldButton.disabled = true;
+    } else {
+      goldDescription.textContent = `Сейчас: +${goldLevel + 1} клик за нажатие. Следующий уровень добавит ещё +1.`;
+      goldPrice.textContent = `Цена: ${GOLD_PRICES[goldLevel]} кликов`;
+      goldPrice.dataset.price = String(GOLD_PRICES[goldLevel]);
+      buyGoldButton.textContent = 'Купить';
+      buyGoldButton.disabled = balance < GOLD_PRICES[goldLevel];
+    }
+    if (autoClick) {
+      autoStatus.textContent = 'Куплен';
+      autoDescription.textContent = `Работает постоянно: автоматически добавляет +${incomeMultiplier()} ${clickWord(incomeMultiplier())} в секунду с учётом перерождения.`;
+      autoPrice.textContent = 'Уже куплен';
+      buyAutoButton.textContent = 'Куплено';
+      buyAutoButton.disabled = true;
+    } else {
+      autoStatus.textContent = 'Не куплен';
+      autoDescription.textContent = 'Автоматически добавляет клики каждую секунду. Бонус перерождения увеличивает доход.';
+      autoPrice.textContent = `Цена: ${AUTO_PRICE} кликов`;
+      buyAutoButton.textContent = 'Купить';
+      buyAutoButton.disabled = balance < AUTO_PRICE;
+    }
+  }
+  function renderRebirth() {
+    rebirthBalance.textContent = formatNumber(balance);
+    const nextRebirthIndex = rebirthLevel;
+    if (nextRebirthIndex >= MAX_REBIRTHS) {
+      rebirthTitle.textContent = `Перерождение ${MAX_REBIRTHS}/${MAX_REBIRTHS}`;
+      rebirthLevelText.textContent = 'Все перерождения пройдены';
+      rebirthPriceText.textContent = 'Максимальный уровень достигнут';
+      rebirthProgress.style.width = '100%';
+      rebirthProgressTrack.setAttribute('aria-valuenow', '100');
+      rebirthPercent.textContent = '100%';
+      rebirthReward.textContent = `Твой постоянный множитель дохода: ×${incomeMultiplier()}.`;
+      confirmRebirthButton.disabled = true;
+      confirmRebirthButton.textContent = 'Максимум достигнут';
+      return;
+    }
+    const price = REBIRTH_PRICES[nextRebirthIndex];
+    const percent = Math.min(100, Math.floor((balance / price) * 100));
+    rebirthTitle.textContent = `Перерождение ${rebirthLevel}/3`;
+    rebirthLevelText.textContent = `Следующий уровень: перерождение ${nextRebirthIndex + 1}/3`;
+    rebirthPriceText.textContent = `Цена: ${formatNumber(price)} кликов`;
+    rebirthProgress.style.width = `${percent}%`;
+    rebirthProgressTrack.setAttribute('aria-valuenow', String(percent));
+    rebirthPercent.textContent = `${percent}%`;
+    rebirthReward.textContent = `Награда: постоянный множитель дохода ×${REBIRTH_MULTIPLIERS[nextRebirthIndex]}. Клики и все улучшения после перерождения сбросятся до нуля.`;
+    confirmRebirthButton.disabled = balance < price;
+    confirmRebirthButton.textContent = balance < price ? 'Нужно больше кликов' : 'Переродиться';
+  }
+  function renderCount() {
+    countOutput.textContent = formatNumber(balance);
+    shopBalance.textContent = formatNumber(balance);
+    renderShop();
+    renderRebirth();
+  }
+  function applyGate() {
+    const showShop = shopUnlocked && !rebirthUnlocked;
+    shopButton.classList.toggle('visible', showShop);
+    shopButton.setAttribute('aria-hidden', showShop ? 'false' : 'true');
+    shopButton.tabIndex = showShop ? 0 : -1;
+    const showRebirth = rebirthUnlocked;
+    rebirthButton.classList.toggle('visible', showRebirth);
+    rebirthButton.setAttribute('aria-hidden', showRebirth ? 'false' : 'true');
+    rebirthButton.tabIndex = showRebirth ? 0 : -1;
+    const gateActive = (gatePending && !shopOpen) || (rebirthPending && !rebirthOpen);
+    gateOverlay.classList.toggle('active', gateActive);
+    gateOverlay.setAttribute('aria-hidden', gateActive ? 'false' : 'true');
+    clickButton.disabled = (gatePending && !shopOpen) || (rebirthPending && !rebirthOpen);
+  }
+  function initAudio() {
+    try {
+      const AudioConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioConstructor) return null;
+      if (!audioContext) audioContext = new AudioConstructor();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      return audioContext;
+    } catch (_) { return null; }
+  }
+  function playClickSound() {
+    if (!soundOn) return;
+    const context = initAudio();
+    if (!context) return;
+    try {
+      const now = context.currentTime;
+      const gain = context.createGain();
+      const oscillator = context.createOscillator();
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(1250, now);
+      oscillator.frequency.exponentialRampToValueAtTime(420, now + .045);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.exponentialRampToValueAtTime(.17, now + .004);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .055);
+      oscillator.connect(gain); gain.connect(context.destination);
+      oscillator.start(now); oscillator.stop(now + .06);
+    } catch (_) { /* Sound is optional on unsupported browsers. */ }
+  }
+  function playShopSound() {
+    if (!soundOn) return;
+    const context = initAudio();
+    if (!context) return;
+    try {
+      const now = context.currentTime;
+      [784, 1174.66, 1568].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = now + index * .065;
+        oscillator.type = index === 0 ? 'triangle' : 'sine';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.exponentialRampToValueAtTime(index === 2 ? .11 : .075, start + .012);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + .19);
+        oscillator.connect(gain); gain.connect(context.destination);
+        oscillator.start(start); oscillator.stop(start + .2);
+      });
+    } catch (_) { /* Sound is optional on unsupported browsers. */ }
+  }
+  function playRebirthSound() {
+    if (!soundOn) return;
+    const context = initAudio();
+    if (!context) return;
+    try {
+      const now = context.currentTime;
+      [440, 660, 880, 1320].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = now + index * .09;
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.exponentialRampToValueAtTime(.08, start + .018);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + .25);
+        oscillator.connect(gain); gain.connect(context.destination);
+        oscillator.start(start); oscillator.stop(start + .26);
+      });
+    } catch (_) { /* Sound is optional on unsupported browsers. */ }
+  }
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('active');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('active'), 2400);
+  }
+  function spawnCartDrops() {
+    const emojis = ['🥚', '🥛', '🍎', '🧀'];
+    for (let i = 0; i < 4; i++) {
+      const drop = document.createElement('span');
+      drop.className = 'cart-drop';
+      drop.textContent = emojis[i % emojis.length];
+      drop.style.setProperty('--drop-delay', `${i * 95}ms`);
+      shopButton.appendChild(drop);
+      drop.addEventListener('animationend', () => drop.remove(), { once: true });
+      setTimeout(() => drop.remove(), 1250);
+    }
+  }
+  function spawnRebirthParticles() {
+    const symbols = ['✨', '💫', '⭐'];
+    for (let i = 0; i < symbols.length; i++) {
+      const particle = document.createElement('span');
+      particle.className = 'rebirth-particle';
+      particle.textContent = symbols[i];
+      const directions = [{ x: -38, y: -34 }, { x: 0, y: -48 }, { x: 38, y: -34 }];
+      particle.style.setProperty('--particle-x', `${directions[i].x}px`);
+      particle.style.setProperty('--particle-y', `${directions[i].y}px`);
+      rebirthButton.appendChild(particle);
+      particle.addEventListener('animationend', () => particle.remove(), { once: true });
+      setTimeout(() => particle.remove(), 1250);
+    }
+  }
+  function unlockShop() {
+    if (shopUnlocked || rebirthPending) return;
+    shopUnlocked = true;
+    gatePending = true;
+    saveState();
+    applyGate();
+  }
+  function openShop() {
+    if (!shopUnlocked || rebirthUnlocked || shopOpen || shopButton.disabled) return;
+    shopButton.disabled = true;
+    playShopSound();
+    spawnCartDrops();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    shopOpenTimer = window.setTimeout(() => {
+      shopButton.disabled = false;
+      shopOpen = true;
+      gatePending = false;
+      shopBackdrop.classList.add('active');
+      shopDialog.classList.add('active');
+      shopDialog.setAttribute('aria-hidden', 'false');
+      shopBackdrop.setAttribute('aria-hidden', 'false');
+      applyGate();
+      renderShop();
+      saveState();
+      closeShopButton.focus({ preventScroll: true });
+    }, reduceMotion ? 0 : 1120);
+  }
+  function closeShop() {
+    if (!shopOpen) return;
+    shopOpen = false;
+    shopBackdrop.classList.remove('active');
+    shopDialog.classList.remove('active');
+    shopDialog.setAttribute('aria-hidden', 'true');
+    shopBackdrop.setAttribute('aria-hidden', 'true');
+    applyGate();
+    saveState();
+    shopButton.focus({ preventScroll: true });
+  }
+  function enterRebirthGate() {
+    if (rebirthLevel >= MAX_REBIRTHS || rebirthUnlocked || !allShopUpgradesBought()) return;
+    shopOpen = false;
+    shopBackdrop.classList.remove('active');
+    shopDialog.classList.remove('active');
+    shopDialog.setAttribute('aria-hidden', 'true');
+    shopBackdrop.setAttribute('aria-hidden', 'true');
+    gatePending = false;
+    rebirthUnlocked = true;
+    rebirthPending = true;
+    rebirthOpen = false;
+    saveState();
+    applyGate();
+    renderRebirth();
+    showToast('Все улучшения куплены! Доступно перерождение.');
+  }
+  function afterUpgradePurchase() {
+    if (!allShopUpgradesBought()) return;
+    if (rebirthLevel < MAX_REBIRTHS) enterRebirthGate();
+    else showToast('Все улучшения максимальны — ты достиг предела перерождений!');
+  }
+  function handleClick() {
+    if ((gatePending && !shopOpen) || rebirthPending || shopOpen) return;
+    const earned = (1 + goldLevel) * incomeMultiplier();
+    balance = Math.min(MAX, balance + earned);
+    totalClicks = Math.min(MAX, totalClicks + earned);
+    manualClicks = Math.min(MAX, manualClicks + 1);
+    if (manualClicks >= 5) {
+      buttonSubtitle.classList.add('faded');
+      hint.classList.add('faded');
+      tagline.classList.add('faded');
+    }
+    renderCount();
+    saveState();
+    playClickSound();
+    clickButton.classList.add('pressed');
+    halo.style.transform = 'scale(1.09)';
+    flash.classList.remove('go');
+    void flash.offsetWidth;
+    flash.classList.add('go');
+    countOutput.classList.remove('bump');
+    void countOutput.offsetWidth;
+    countOutput.classList.add('bump');
+    clearTimeout(bumpTimer);
+    bumpTimer = setTimeout(() => {
+      clickButton.classList.remove('pressed');
+      halo.style.transform = '';
+      countOutput.classList.remove('bump');
+    }, 130);
+    if (totalClicks >= 50 && !shopUnlocked) unlockShop();
+  }
+  function buyGold() {
+    if (goldLevel >= 5) return;
+    const price = GOLD_PRICES[goldLevel];
+    if (balance < price) return;
+    balance -= price;
+    goldLevel++;
+    renderCount();
+    saveState();
+    playShopSound();
+    if (allShopUpgradesBought()) afterUpgradePurchase();
+    else showToast(`Золотой клик улучшен до уровня ${goldLevel}!`);
+  }
+  function buyAuto() {
+    if (autoClick || balance < AUTO_PRICE) return;
+    balance -= AUTO_PRICE;
+    autoClick = true;
+    renderCount();
+    saveState();
+    playShopSound();
+    if (allShopUpgradesBought()) afterUpgradePurchase();
+    else showToast('Автоклик куплен: +1 клик в секунду!');
+  }
+  function openRebirth() {
+    if (!rebirthUnlocked || rebirthButton.disabled || rebirthOpen) return;
+    rebirthButton.disabled = true;
+    rebirthButton.classList.add('spinning');
+    playRebirthSound();
+    spawnRebirthParticles();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rebirthOpenTimer = window.setTimeout(() => {
+      rebirthButton.classList.remove('spinning');
+      rebirthButton.disabled = false;
+      rebirthOpen = true;
+      rebirthBackdrop.classList.add('active');
+      rebirthDialog.classList.add('active');
+      rebirthBackdrop.setAttribute('aria-hidden', 'false');
+      rebirthDialog.setAttribute('aria-hidden', 'false');
+      applyGate();
+      renderRebirth();
+      closeRebirthButton.focus({ preventScroll: true });
+    }, reduceMotion ? 0 : 1120);
+  }
+  function closeRebirth() {
+    if (!rebirthOpen) return;
+    rebirthOpen = false;
+    // Dismiss the first-time gate as well: a player may inspect the requirements,
+    // close this panel, keep clicking to earn more, then reopen the panel later.
+    rebirthPending = false;
+    rebirthBackdrop.classList.remove('active');
+    rebirthDialog.classList.remove('active');
+    rebirthBackdrop.setAttribute('aria-hidden', 'true');
+    rebirthDialog.setAttribute('aria-hidden', 'true');
+    applyGate();
+    saveState();
+    rebirthButton.focus({ preventScroll: true });
+    if (balance < REBIRTH_PRICES[Math.min(rebirthLevel, MAX_REBIRTHS - 1)]) {
+      showToast('Продолжай кликать — окно перерождения можно открыть снова.');
+    }
+  }
+  function completeRebirth() {
+    if (!rebirthOpen || rebirthLevel >= MAX_REBIRTHS) return;
+    const rewardIndex = rebirthLevel;
+    const price = REBIRTH_PRICES[rewardIndex];
+    if (balance < price) return;
+
+    rebirthLevel++;
+    const newMultiplier = REBIRTH_MULTIPLIERS[rewardIndex];
+
+    // A rebirth resets all current-run currency and upgrades; only rebirth tier/multiplier remain.
+    balance = 0;
+    totalClicks = 0;
+    manualClicks = 0;
+    goldLevel = 0;
+    autoClick = false;
+    shopUnlocked = false;
+    gatePending = false;
+    shopOpen = false;
+    rebirthUnlocked = false;
+    rebirthPending = false;
+    rebirthOpen = false;
+    shopBackdrop.classList.remove('active');
+    shopDialog.classList.remove('active');
+    rebirthBackdrop.classList.remove('active');
+    rebirthDialog.classList.remove('active');
+    shopDialog.setAttribute('aria-hidden', 'true');
+    shopBackdrop.setAttribute('aria-hidden', 'true');
+    rebirthDialog.setAttribute('aria-hidden', 'true');
+    rebirthBackdrop.setAttribute('aria-hidden', 'true');
+    buttonSubtitle.classList.remove('faded');
+    hint.classList.remove('faded');
+    tagline.classList.remove('faded');
+    renderCount();
+    applyGate();
+    saveState();
+    playRebirthSound();
+    showToast(`Перерождение ${rebirthLevel}/3! Доход теперь ×${newMultiplier}. Клики и улучшения сброшены.`);
+    clickButton.focus({ preventScroll: true });
+  }
+
+  clickButton.addEventListener('click', handleClick);
+  shopButton.addEventListener('click', openShop);
+  closeShopButton.addEventListener('click', closeShop);
+  shopBackdrop.addEventListener('click', closeShop);
+  buyGoldButton.addEventListener('click', buyGold);
+  buyAutoButton.addEventListener('click', buyAuto);
+  rebirthButton.addEventListener('click', openRebirth);
+  closeRebirthButton.addEventListener('click', closeRebirth);
+  rebirthBackdrop.addEventListener('click', closeRebirth);
+  confirmRebirthButton.addEventListener('click', completeRebirth);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && shopOpen) closeShop();
+    else if (event.key === 'Escape' && rebirthOpen) closeRebirth();
+  });
+
+  soundToggle.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundToggle.setAttribute('aria-label', soundOn ? 'Выключить звук' : 'Включить звук');
+    soundToggle.title = soundOn ? 'Звук включён' : 'Звук выключен';
+    soundIcon.innerHTML = soundOn
+      ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>'
+      : '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/>';
+  });
+  resetButton.addEventListener('click', () => {
+    if (balance === 0 && totalClicks === 0) return;
+    if (window.confirm('Сбросить счёт кликов до нуля? Купленные улучшения останутся.')) {
+      balance = 0;
+      totalClicks = 0;
+      manualClicks = 0;
+      buttonSubtitle.classList.remove('faded');
+      hint.classList.remove('faded');
+      tagline.classList.remove('faded');
+      renderCount();
+      saveState();
+    }
+  });
+
+  loadState();
+  if (manualClicks >= 5) {
+    buttonSubtitle.classList.add('faded');
+    hint.classList.add('faded');
+    tagline.classList.add('faded');
+  }
+  if (allShopUpgradesBought() && rebirthLevel < MAX_REBIRTHS) {
+    rebirthUnlocked = true;
+    gatePending = false;
+  }
+  renderCount();
+  applyGate();
+  window.setInterval(() => {
+    if (autoClick && (balance < MAX || totalClicks < MAX)) {
+      const passiveIncome = incomeMultiplier();
+      balance = Math.min(MAX, balance + passiveIncome);
+      totalClicks = Math.min(MAX, totalClicks + passiveIncome);
+      renderCount();
+      saveState();
+      if (totalClicks >= 50 && !shopUnlocked) unlockShop();
+    }
+  }, 1000);
+  if (!shopUnlocked && totalClicks >= 50) unlockShop();
+
+  // Warn before browser reload / close if the run contains progress.
+  function hasProgressToLose() {
+    return totalClicks > 0 || balance > 0 || manualClicks > 0 || goldLevel > 0 || autoClick ||
+      shopUnlocked || gatePending || rebirthLevel > 0;
+  }
+  window.addEventListener('beforeunload', event => {
+    if (!hasProgressToLose()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+})();
+
+</script>
+</body>
+</html>
